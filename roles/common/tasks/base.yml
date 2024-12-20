@@ -1,0 +1,49 @@
+---
+- name: Update and upgrade apt packages
+  apt:
+    update_cache: yes
+    upgrade: dist
+
+- name: Install required packages
+  apt:
+    name:
+      - make
+      - build-essential
+      - jq
+      - wget
+      - liblz4-tool
+      - aria2
+    state: present
+
+- name: Add bashrc configuration
+  blockinfile:
+    marker_begin: "base_begin"
+    marker_end: "base_end"
+    path: "{{ user_dir }}/.bashrc"
+    block: |
+      set -o vi
+      alias dreload='sudo systemctl daemon-reload'
+
+- name: Set file limits
+  blockinfile:
+    path: /etc/security/limits.conf
+    block: |
+      * soft nofile 655350
+      * hard nofile 655350
+
+
+# Furthermore, the update of other parameters like huge pages or hyper-thread may improve performance
+- name: Apply kernel parameters
+  shell: |
+    modprobe tcp_bbr; \
+    echo "net.core.default_qdisc=fq" | tee -a /etc/sysctl.conf; \
+    echo "net.ipv4.tcp_congestion_control=bbr" | tee -a /etc/sysctl.conf; \
+    echo "net.core.rmem_default=62500000" | tee -a /etc/sysctl.conf; \
+    echo "net.core.rmem_max=62500000" | tee -a /etc/sysctl.conf; \
+    echo "net.core.wmem_default=62500000" | tee -a /etc/sysctl.conf; \
+    echo "net.core.wmem_max=62500000" | tee -a /etc/sysctl.conf; \
+    echo "net.ipv4.tcp_rmem="4096 62500000 62500000" | tee -a /etc/sysctl.conf; \
+    echo "net.ipv4.tcp_wmem="4096 62500000 62500000" | tee -a /etc/sysctl.conf; \
+    sysctl -p
+  args:
+    executable: /bin/bash

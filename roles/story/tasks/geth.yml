@@ -1,0 +1,61 @@
+---
+- name: Clone story-geth repository
+  git:
+    repo: https://github.com/piplabs/story-geth.git
+    dest: "{{ user_dir }}/story-geth"
+    version: "{{ geth_version }}"
+  become: true
+  become_user: "{{ ansible_user }}"
+
+- name: Build geth using make
+  shell: |
+    cd {{ user_dir }}/story-geth
+    source {{ user_dir }}/.profile
+    make geth
+    mv build/bin/geth $GOPATH/bin/
+  become: true
+  become_user: "{{ ansible_user }}"
+  args:
+    executable: /bin/bash
+
+
+- name: Create systemd service file for geth
+  copy:
+    dest: /etc/systemd/system/geth.service
+    content: |
+      [Unit]
+      Description=geth daemon
+      After=network-online.target
+
+      [Service]
+      User={{ ansible_user }}
+      ExecStart={{ user_dir }}/goApps/bin/geth --odyssey --syncmode full
+      KillMode=process
+      KillSignal=SIGINT
+      TimeoutStopSec=90
+      Restart=on-failure
+      RestartSec=10s
+      LimitNOFILE=65535
+
+      [Install]
+      WantedBy=multi-user.target
+  notify: Reload systemd
+
+- name: Add aliases to bashrc
+  blockinfile:
+    path: "{{ user_dir }}/.bashrc"
+    marker_begin: "geth_begin"
+    marker_end: "geth_end"
+    block: |
+      alias gstart='sudo systemctl start geth'
+      alias gstop='sudo systemctl stop geth'
+      alias gstatus='sudo systemctl status geth'
+      alias glog='journalctl -u geth -f -o cat'
+  become: true
+  become_user: "{{ ansible_user }}"
+
+- name: Start the geth service
+  systemd:
+    name: geth
+    state: "{{ systemd_state }}"
+    enabled: true

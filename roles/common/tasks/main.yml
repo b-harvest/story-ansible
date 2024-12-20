@@ -1,0 +1,8 @@
+#SPDX-License-Identifier: MIT-0
+---
+# tasks file for common
+- include_tasks: base.yml
+- include_tasks: logrotate.yml
+- include_tasks: gvm.yml
+- include_tasks: network.yml
+- include_tasks: node_exporter.yml

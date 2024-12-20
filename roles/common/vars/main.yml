@@ -1,0 +1,7 @@
+#SPDX-License-Identifier: MIT-0
+---
+# vars file for common
+gvm_version: v0.5.2
+gvm_arch: linux-amd64
+gvm_binary_path: /usr/local/bin/gvm
+

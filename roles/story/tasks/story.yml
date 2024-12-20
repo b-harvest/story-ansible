@@ -1,0 +1,164 @@
+---
+- name: Clone story repository
+  git:
+    repo: https://github.com/piplabs/story.git
+    dest: "{{ user_dir }}/story"
+    version: "{{ story_version }}"
+  become: true
+  become_user: "{{ ansible_user }}"
+
+- name: Build story binary
+  shell: |
+    source {{ user_dir }}/.profile
+    go build -o story ./client
+    cp {{ user_dir }}/story/story {{ user_dir }}/goApps/bin/story
+  args:
+    chdir: "{{ user_dir }}/story"
+    executable: /bin/bash
+  become: true
+  become_user: "{{ ansible_user }}"
+
+- name: Initialize story with odyssey network
+  command: ./story init --network odyssey
+  args:
+    chdir: "{{ user_dir }}/goApps/bin"
+  become: true
+  become_user: "{{ ansible_user }}"
+
+- name: Install cosmovisor
+  shell: |
+    source {{ user_dir }}/.profile
+    go install cosmossdk.io/tools/cosmovisor/cmd/cosmovisor@latest
+  become: true
+  become_user: "{{ ansible_user }}"
+  args:
+    executable: /bin/bash
+
+- name: Initialize cosmovisor
+  shell: |
+    source {{ user_dir }}/.profile
+    
+    export DAEMON_NAME=story
+    export DAEMON_HOME={{ user_dir }}/.story/story
+    rm -f $DAEMON_HOME/cosmovisor/config.toml
+    cosmovisor init {{ user_dir }}/goApps/bin/story
+  become: true
+  become_user: "{{ ansible_user }}"
+  args:
+    executable: /bin/bash
+  ignore_errors: true
+
+- name: register cosmovisor path
+  shell: |
+    source {{ user_dir }}/.profile
+    which cosmovisor
+  register: cosmovisor_path
+  args:
+    executable: /bin/bash
+
+- name: Create systemd service file for story
+  copy:
+    dest: /etc/systemd/system/story.service
+    content: |
+      [Unit]
+      Description=story node daemon
+      After=network-online.target
+
+      [Service]
+      Environment="DAEMON_NAME=story"
+      Environment="DAEMON_HOME={{ user_dir }}/.story/story"
+      Environment="DAEMON_ALLOW_DOWNLOAD_BINARIES=true"
+      Environment="DAEMON_RESTART_AFTER_UPGRADE=true"
+      Environment="UNSAFE_SKIP_BACKUP=true"
+      User={{ ansible_user }}
+      ExecStart={{ cosmovisor_path.stdout }} run run --home {{ user_dir }}/.story/story
+      StandardOutput=syslog
+      StandardError=syslog
+      SyslogIdentifier=story
+      Restart=always
+      RestartSec=3
+      LimitNOFILE=65535
+
+      [Install]
+      WantedBy=multi-user.target
+  notify: Reload systemd
+
+- name: Enable story systemd service
+  systemd:
+    name: story
+    enabled: true
+
+- name: Add aliases to bashrc
+  blockinfile:
+    path: "{{ user_dir }}/.bashrc"
+    marker_begin: "story_begin"
+    marker_end: "story_end"
+    block: |
+      alias nstart='sudo systemctl start story'
+      alias nstop='sudo systemctl stop story'
+      alias nstatus='sudo systemctl status story'
+      alias nlog='journalctl -u story -f -o cat'
+      alias nst='curl -s localhost:26657/status | jq'
+      alias ninfo='curl -sS http://127.0.0.1:26657/net_info | jq | egrep "n_peers|moniker"'
+  become: true
+  become_user: "{{ ansible_user }}"
+
+- name: Configure cosmovisor upgrades
+  shell: |
+    source {{ user_dir }}/.profile
+    export VHOME={{ user_dir }}/.story/story
+    cd $VHOME/cosmovisor
+    rm -rf current
+    mkdir -p upgrades/{{ story_version }}/bin
+    
+    cp {{ user_dir }}/goApps/bin/story $VHOME/cosmovisor/upgrades/{{ story_version }}/bin/
+    
+    ln -s $VHOME/cosmovisor/upgrades/{{ story_version }} $VHOME/cosmovisor/current
+  args:
+    executable: /bin/bash
+  become: true
+  become_user: "{{ ansible_user }}"
+
+- name: Edit config.toml
+  lineinfile:
+    path: "{{ user_dir }}/.story/story/config/config.toml"
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+  loop:
+    - { regexp: 'external_address = ".*"', line: "external_address = \"{{ public_host }}:26656\"" }
+    - { regexp: 'max_num_inbound_peers = .*', line: "max_num_inbound_peers = 40" }
+    - { regexp: 'max_num_outbound_peers = .*', line: "max_num_outbound_peers = 40" }
+    - { regexp: 'indexer = ".*"', line: "indexer = \"null\"" }
+    - { regexp: '^proxy_app = ".*:26658"', line: "proxy_app = \"tcp://127.0.0.1:26658\"" }
+#    - { regexp: '^laddr = ".*:26657"', line: "laddr = \"tcp://0.0.0.0:26657\"" }
+    - { regexp: '^pprof_laddr = ".*:6060"', line: "pprof_laddr = \"localhost:26666\"" }
+    - { regexp: '^laddr = ".*:26656"', line: "laddr = \"tcp://0.0.0.0:26656\"" }
+    - { regexp: 'peer_gossip_sleep_duration = ".*"', line: "peer_gossip_sleep_duration = \"10ms\"" }
+    - { regexp: 'flush_throttle_timeout = ".*"', line: "flush_throttle_timeout = \"10ms\"" }
+    - { regexp: 'double_sign_check_height = .*', line: "double_sign_check_height = 2" }
+    - { regexp: 'pex = ".*"', line: "pex = true" }
+    - { regexp: 'timeout_propose = ".*"', line: "timeout_propose = \"3s\"" }
+    - { regexp: 'timeout_propose_delta = ".*"', line: "timeout_propose_delta = \"500ms\"" }
+    - { regexp: 'timeout_prevote = ".*"', line: "timeout_prevote = \"1s\"" }
+    - { regexp: 'timeout_prevote_delta = ".*"', line: "timeout_prevote_delta = \"500ms\"" }
+    - { regexp: 'timeout_precommit = ".*"', line: "timeout_precommit = \"1s\"" }
+    - { regexp: 'timeout_precommit_delta = ".*"', line: "timeout_precommit_delta = \"500ms\"" }
+    - { regexp: 'type = \"flood\"', line: "type = \"nop\"" }
+    - { regexp: 'broadcast = true', line: "type = false" }
+
+- name: Edit story.toml
+  lineinfile:
+    path: "{{ user_dir }}/.story/story/config/story.toml"
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+  loop:
+    - { regexp: 'pruning = ".*"', line: "pruning = \"default\"" }
+    - { regexp: 'snapshot-interval = .*', line: "snapshot-interval = 0" }
+    - { regexp: 'evm-build-delay = .*', line: "evm-build-delay = \"600ms\"" }
+    - { regexp: 'evm-build-optimistic = .*', line: "evm-build-optimistic = false" }
+
+- name: Start the story service
+  systemd:
+    name: story
+    state: "{{ systemd_state }}"
+    enabled: true

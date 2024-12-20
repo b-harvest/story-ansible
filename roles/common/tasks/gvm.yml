@@ -1,0 +1,43 @@
+---
+- name: Install bison
+  apt:
+    name: bison
+    state: present
+
+- name: Download gvm binary
+  get_url:
+    url: "https://github.com/andrewkroh/gvm/releases/download/{{ gvm_version }}/gvm-{{ gvm_arch }}"
+    dest: "{{ gvm_binary_path }}"
+    mode: '0755'
+
+- name: Verify gvm installation
+  command: gvm --version
+  register: gvm_version_check
+  ignore_errors: true
+
+- name: Install Go using gvm
+  shell: |
+    gvm install {{ go_version }}
+    gvm use {{ go_version }} --default
+    mkdir -p {{ user_dir }}/goApps/bin/
+  args:
+    executable: /bin/bash
+  become: true
+  become_user: "{{ ansible_user }}"
+
+- name: Add Go environment variables
+  blockinfile:
+    path: "{{ user_dir }}/.profile"
+    block: |
+      export GOPATH={{ user_dir }}/goApps
+      export PATH=$GOPATH/bin:$PATH
+      eval "$(gvm {{ go_version }})"
+    state: present
+
+- name: Verify Go installation
+  shell: |
+    eval "$(gvm {{ go_version }})"
+    go version
+  register: go_version_check
+  failed_when: "'go{{ go_version }}' not in go_version_check.stdout"
+

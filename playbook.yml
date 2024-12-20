@@ -1,0 +1,16 @@
+---
+# This Playbook would deploy the story fullnode with optimized settings, needed tools for operating.
+# optimized settings & needed tools include follows
+# - apt packages
+# - linux settings for performance && security
+# - gvm(go)
+# - system daemon(story, geth, ...)
+# - configuration file
+# - other chores
+
+- name: Setup story Node
+  hosts: all
+  become: true
+  roles:
+    - common
+    - story

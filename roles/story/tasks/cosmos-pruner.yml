@@ -1,0 +1,19 @@
+---
+- name: Clone the repository
+  become: false
+  git:
+    repo: '{{ cosmos_pruner }}'
+    dest: '{{ user_dir }}/cosmos_pruner'
+    update: yes
+    force: yes
+    recursive: no
+
+- name: Run make build for cosmos-pruner
+  become: false
+  shell: |
+    source {{ user_dir }}/.profile
+    cd {{ user_dir }}/cosmos_pruner
+    make build
+    mv build/cosmos-pruner $GOPATH/bin/
+  args:
+    executable: /bin/bash

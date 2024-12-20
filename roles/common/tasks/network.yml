@@ -1,0 +1,40 @@
+---
+- name: Setup UFW rules
+  block:
+    - name: Set default policy outgoing
+      ufw:
+        default: "allow"
+        state: enabled
+        direction: outgoing
+
+    - name: Set default policy incoming
+      ufw:
+        default: "deny"
+        state: enabled
+        direction: incoming
+
+    - name: Allow specific SSH and monitoring ports
+      ufw:
+        rule: "allow"
+        from_ip: "{{ item.ip }}"
+        port: "{{ item.port }}"
+        proto: tcp
+        comment: "{{ item.comment }}"
+      with_items: "{{ ufw_rules }}"
+
+- name: Disable IPv6
+  block:
+    - name: Update UFW configuration
+      lineinfile:
+        path: /etc/default/ufw
+        regexp: '^IPV6='
+        line: 'IPV6=no'
+
+- name: Apply IPv6 sysctl settings
+  sysctl:
+    name: "{{ item.name }}"
+    value: "1"
+  with_items:
+    - { name: "net.ipv6.conf.all.disable_ipv6" }
+    - { name: "net.ipv6.conf.default.disable_ipv6" }
+    - { name: "net.ipv6.conf.lo.disable_ipv6" }
