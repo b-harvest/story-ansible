@@ -1,6 +1,6 @@
 ---
-# This Playbook would deploy the story fullnode with optimized settings, needed tools for operating.
-# optimized settings & needed tools include follows
+# This Playbook would deploy the story fullnode with optimized settings and needed tools for operating.
+# optimized settings & needed tools include followings
 # - apt packages
 # - linux settings for performance && security
 # - gvm(go)

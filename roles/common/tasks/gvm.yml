@@ -31,6 +31,7 @@
     block: |
       export GOPATH={{ user_dir }}/goApps
       export PATH=$GOPATH/bin:$PATH
+      export GO111MODULE="on"
       eval "$(gvm {{ go_version }})"
     state: present
 

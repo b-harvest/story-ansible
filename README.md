@@ -1,9 +1,16 @@
 # story-ansible
-ansible playbook for story node setup.
+Ansible playbook for setting up a Story node.
 
-## quickstart
+## Quickstart
+
+- Clone the repository to your local machine:
 ```bash
-ansible-playbook -i inventory.yml playbook.yml 
+git clone https://github.com/b-harvest/story-ansible.git
+cd story-ansible 
+```
+- To execute the playbook, run:
+```aiignore
+ansible-playbook -i inventory.yml playbook.yml
 ```
 
 ## Inventory 
@@ -50,25 +57,24 @@ full:
 
 ```
 
+## Roles
 
-
-
-
-## Role
 ---
 
-### common
-base role for setup linux node. 
+### Common Role
+This role sets up the base environment for Linux Node. 
 
-it's targeted for ubuntu. so the other distribution may not work for this role.
+It's targeted for Ubuntu, so the other distribution may not work for this role.
 
-followings are included
-- install necessary tools to operate like gvm, node exporter, etc... 
-- set up firewall, and kernel parameter related with network.
+Followings are included
+- Installation of essential tools like `GVM`, `Node Exporter` and others ... 
+- Configuration of firewall settings and network-related kernel parameters.
 
-
-
-### story
+### Story Role
 This role set up system daemon, and install other tools for operate like cosmovisor, cosmos-pruner.
-# story-ansible
-# story-ansible
+
+## Contributing
+
+Contributions are welcome! Please fork the repository and submit a pull request with your changes. Ensure that your code adheres to the established style and passes all tests.
+
+

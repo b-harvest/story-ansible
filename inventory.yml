@@ -11,7 +11,8 @@ all:
     user_dir: '/home/{{ ansible_user }}'
 
     geth_version: "v0.11.0"
-    story_version: "v0.13.0"
+    story_version: "v0.13.2"
+    network_type: odyssey
     go_version: "1.22.2"
 
     # last state of system daemon.

@@ -19,7 +19,7 @@
   become_user: "{{ ansible_user }}"
 
 - name: Initialize story with odyssey network
-  command: ./story init --network odyssey
+  command: ./story init --network {{ network_type }}
   args:
     chdir: "{{ user_dir }}/goApps/bin"
   become: true
