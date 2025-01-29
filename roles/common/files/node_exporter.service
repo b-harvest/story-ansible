@@ -5,7 +5,7 @@ After=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/usr/local/bin/node_exporter --collector.systemd --collector.processes --web.listen-address=":59100"
+ExecStart=/usr/local/bin/node_exporter --collector.systemd --collector.processes --web.listen-address=":{{ node_exporter_listen_addr }}"
 Restart=on-failure
 
 [Install]

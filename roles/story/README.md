@@ -1,6 +1,6 @@
 Story
 =========
 
-This role set up system daemon, and install other tools.
+- This role sets up system daemon and installs other tools.
 
 

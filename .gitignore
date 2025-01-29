@@ -1,3 +1,14 @@
+### ansible ###
+secrets.yml
 /.inventory.yml
 keypair
 keypair.pub
+
+# editors
+.vscode
+.idea
+**/.idea
+*.iml
+*.ipr
+.DS_Store
+**/.DS_Store
